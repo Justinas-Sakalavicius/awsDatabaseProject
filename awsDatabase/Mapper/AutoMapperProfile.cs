@@ -1,5 +1,5 @@
 ﻿using AutoMapper;
-using awsDatabase.DTO;
+using awsDatabase.DTOs;
 using awsDatabase.Models;
 
 namespace awsDatabase.Mapper
@@ -8,11 +8,7 @@ namespace awsDatabase.Mapper
     {
         public AutoMapperProfile() 
         {
-            CreateMap<Image, ImageVM>()
-                .ForMember(dest => dest.Bitmap, opt => opt.Ignore());
-
-            CreateMap<ImageUploadVM, Image>();
-            CreateMap<ImageVM, Image>();
+          
         }
     }
 }

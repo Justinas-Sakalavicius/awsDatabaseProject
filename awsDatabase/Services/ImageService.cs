@@ -1,7 +1,7 @@
 ﻿using Amazon.Runtime;
 using Amazon.S3.Model;
 using AutoMapper;
-using awsDatabase.DTO;
+using awsDatabase.DTOs;
 using awsDatabase.Models;
 using awsDatabase.Repositories;
 
@@ -9,10 +9,10 @@ namespace awsDatabase.Services
 {
     public interface IImageService
     {
-        Task<List<ImageVM>> GetAllImagesAsync();
-        Task<ImageVM> UploadImageAsync(IFormFile uploadClientModel, string name);
-        Task<ImageVM> DeleteImageAsync(string name);
-        Task<ImageVM> GetRandomImageAsync();
+        Task<List<ImageResponse>> GetAllImagesAsync();
+        Task<string> UploadImageAsync(IFormFile uploadClientModel, string name);
+        Task DeleteImageAsync(string name);
+        Task<ImageResponse> GetRandomImageAsync();
         Task<byte[]> GetImageAsync(string name);
     }
 
@@ -32,57 +32,15 @@ namespace awsDatabase.Services
             _s3Service = s3Service;
         }
 
-        public async Task<ImageVM> DeleteImageAsync(string name)
-        {
-            var imageReference = await _imageRepository.GetImagesByNameAsync(name);
-
-            if (imageReference == null)
-            {
-                throw new Exception("Image not found.");
-            }
-
-            // Delete the file from S3
-            await _s3Service.DeleteFileAsync(imageReference.First().Url);
-
-            // Delete the reference from the database
-            await _imageRepository.DeleteImageAsync(imageReference.First());
-
-            return new ImageVM();
-        }
-
-        public async Task<List<ImageVM>> GetAllImagesAsync()
+        public async Task<List<ImageResponse>> GetAllImagesAsync()
         {
             var entities = await _imageRepository.GetAllImagesAsync();
             //var viewModel = entities.Select(entity => _imageMapper.ToClientModel(entity, _s3Service)).ToList();
 
-            return new List<ImageVM>();
+            return new List<ImageResponse>();
         }
 
-        public async Task<byte[]> GetImageAsync(string name)
-        {
-            throw new NotImplementedException();
-        }
-
-        public async Task<ImageVM> GetRandomImageAsync()
-        {
-            var imageReference = await _imageRepository.GetRandomImageAsync();
-            if (imageReference == null)
-            {
-                throw new Exception("No images found.");
-            }
-
-            var imageMetadata = new ImageVM
-            {
-                Name = imageReference.Name,
-                FileExtension = imageReference.FileExtension,
-                Size = imageReference.Size,
-                UpdatedAt = imageReference.UpdatedAt,
-            };
-
-            return imageMetadata;
-        }
-
-        public async Task<ImageVM> UploadImageAsync(IFormFile file, string name)
+        public async Task<string> UploadImageAsync(IFormFile file, string name)
         {
             // Process file
             await using var memoryStream = new MemoryStream();
@@ -103,8 +61,50 @@ namespace awsDatabase.Services
 
             var result = await _imageRepository.SaveImageAsync(imageReference);
 
-            return new ImageVM();
+            return s3Url;
         }
+
+        public async Task DeleteImageAsync(string name)
+        {
+            var imageReference = await _imageRepository.GetImagesByNameAsync(name);
+
+            if (imageReference == null)
+            {
+                throw new Exception("Image not found.");
+            }
+
+            // Delete the file from S3
+            await _s3Service.DeleteFileAsync(imageReference.First().Url);
+
+            // Delete the reference from the database
+            await _imageRepository.DeleteImageAsync(imageReference.First());
+        }
+
+        public async Task<byte[]> GetImageAsync(string name)
+        {
+            throw new NotImplementedException();
+        }
+
+        public async Task<ImageResponse> GetRandomImageAsync()
+        {
+            var imageReference = await _imageRepository.GetRandomImageAsync();
+            if (imageReference == null)
+            {
+                throw new Exception("No images found.");
+            }
+
+            var imageMetadata = new ImageResponse
+            {
+                Name = imageReference.Name,
+                FileExtension = imageReference.FileExtension,
+                Size = imageReference.Size,
+                UpdatedAt = imageReference.UpdatedAt,
+            };
+
+            return imageMetadata;
+        }
+
+        
 
     }
 }
