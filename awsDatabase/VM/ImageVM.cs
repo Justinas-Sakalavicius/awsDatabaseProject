@@ -16,6 +16,6 @@ namespace awsDatabase.DTO
 
         public byte[] Bitmap { get; set; }
 
-        //public ObjectMetadata ObjectMetadata { get; set; }
+        public MetadataCollection MetadataCollection { get; set; }
     }
 }

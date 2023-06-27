@@ -89,7 +89,7 @@ namespace awsDatabase.Services
             await file.CopyToAsync(memoryStream);
             var fileExt = Path.GetExtension(file.FileName);
 
-            var s3Url = await _s3Service.UploadFileAsync(file);
+            var s3Url = await _s3Service.UploadFileAsync(file, name);
 
             var imageReference = new Image
             {

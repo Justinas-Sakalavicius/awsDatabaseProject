@@ -6,7 +6,7 @@ namespace awsDatabase.Services
 {
     public interface IS3Service
     {
-        Task<string> UploadFileAsync(IFormFile file);
+        Task<string> UploadFileAsync(IFormFile file, string name);
         Task DeleteFileAsync(string key);
         Task<MetadataCollection> GetFileMetadataAsync(string key);
     }
@@ -30,15 +30,13 @@ namespace awsDatabase.Services
             //_s3Client = new AmazonS3Client(awsOptions.Credentials, awsOptions.Region);
         }
 
-        public async Task<string> UploadFileAsync(IFormFile file)
+        public async Task<string> UploadFileAsync(IFormFile file, string name)
         {
-            var key = Guid.NewGuid().ToString();
-
             using var stream = file.OpenReadStream();
             var putObjectRequest = new PutObjectRequest
             {
                 BucketName = BucketName,
-                Key = key,
+                Key = name,
                 InputStream = stream,
                 ContentType = file.ContentType
             };
@@ -46,7 +44,7 @@ namespace awsDatabase.Services
             try
             {
                 await _s3Client.PutObjectAsync(putObjectRequest);
-                return key;
+                return name;
             }
             catch (AmazonS3Exception ex)
             {
