@@ -1,9 +1,7 @@
 
-namespace awsDatabase.DTOs
+namespace awsDatabase.DTOs;
+public class ImageUploadRequest
 {
-    public class ImageUploadRequest
-    {
-        public IFormFile File { get; set; }
-        public string Name { get; set; }
-    }
+    public string Name { get; set; } = null!;
+    public IFormFile File { get; set; } = null!;
 }

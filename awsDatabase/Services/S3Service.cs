@@ -1,13 +1,15 @@
 ﻿using Amazon.S3;
 using Amazon.S3.Model;
+using Amazon.S3.Util;
+using awsDatabase.DTOs;
 using System.Net;
 
 namespace awsDatabase.Services
 {
     public interface IS3Service
     {
-        Task<string> UploadFileAsync(IFormFile file, string name);
-        Task DeleteFileAsync(string key);
+        Task<ImageUploadResponse> UploadFileAsync(IFormFile file, string name);
+        Task<ImageDeleteResponse> DeleteFileAsync(string key);
         Task<MetadataCollection> GetFileMetadataAsync(string key);
     }
 
@@ -30,8 +32,9 @@ namespace awsDatabase.Services
             //_s3Client = new AmazonS3Client(awsOptions.Credentials, awsOptions.Region);
         }
 
-        public async Task<string> UploadFileAsync(IFormFile file, string name)
+        public async Task<ImageUploadResponse> UploadFileAsync(IFormFile file, string name)
         {
+            var response = new ImageUploadResponse();
             using var stream = file.OpenReadStream();
             var putObjectRequest = new PutObjectRequest
             {
@@ -43,18 +46,33 @@ namespace awsDatabase.Services
 
             try
             {
-                await _s3Client.PutObjectAsync(putObjectRequest);
-                return name;
+                await BucketExistsAsync(BucketName);
+
+                var result = await _s3Client.PutObjectAsync(putObjectRequest);
+                response.StatusCode = (int)result.HttpStatusCode;
+                response.Message = $"{name} has been uploaded successfully";
             }
             catch (AmazonS3Exception ex)
             {
-                // Handle exception as needed
-                throw new Exception($"An error occurred when uploading to S3: {ex.Message}", ex);
+                response.StatusCode = (int)ex.StatusCode;
+                response.Message = $"An error occurred when uploading to S3: {ex.Message}";
             }
+            catch (Exception ex)
+            {
+                response.StatusCode = 500;
+                response.Message = $"An error occurred when uploading to S3: {ex.Message}";
+            }
+            finally 
+            { 
+                stream.Close();
+            }
+
+            return response;
         }
 
-        public async Task DeleteFileAsync(string key)
+        public async Task<ImageDeleteResponse> DeleteFileAsync(string key)
         {
+            var response = new ImageDeleteResponse();
             var deleteObjectRequest = new DeleteObjectRequest
             {
                 BucketName = BucketName,
@@ -67,14 +85,23 @@ namespace awsDatabase.Services
             }
             catch (AmazonS3Exception ex)
             {
-                throw new Exception($"An error occurred when deleting from S3: {ex.Message}", ex);
+                response.StatusCode = (int)ex.StatusCode;
+                response.Message = ($"An error occurred when deleting from S3: {ex.Message}");
             }
+            catch (Exception ex)
+            {
+                response.StatusCode = 500;
+                response.Message = ($"An error occurred when deleting from S3: {ex.Message}");
+            }
+
+            return response;
         }
 
         public async Task<MetadataCollection> GetFileMetadataAsync(string key)
         {
             try
             {
+                
                 var metadataRequest = new GetObjectMetadataRequest
                 {
                     BucketName = BucketName,
@@ -89,13 +116,17 @@ namespace awsDatabase.Services
             {
                 throw new Exception($"An error occurred when getting metadata from S3: {ex.Message}", ex);
             }
+            catch (Exception ex)
+            {
+                throw new Exception($"An error occurred when getting metadata from S3: {ex.Message}", ex);
+            }
         }
 
         private async Task<bool> BucketExistsAsync(string bucket)
         {
             try
             {
-                var response = await _s3Client.DoesS3BucketExistAsync(bucket);
+                var response = await AmazonS3Util.DoesS3BucketExistV2Async(_s3Client, bucket);
                 return response;
             }
             catch (AmazonS3Exception ex)

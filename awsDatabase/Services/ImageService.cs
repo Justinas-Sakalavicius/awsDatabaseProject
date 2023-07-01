@@ -103,8 +103,5 @@ namespace awsDatabase.Services
 
             return imageMetadata;
         }
-
-        
-
     }
 }
