@@ -15,7 +15,7 @@ namespace awsDatabase.Controllers
         }
 
         // Endpoint to show metadata for all existing images
-        [HttpGet]
+        [HttpGet("get-all-metadata")]
         public async Task<IActionResult> GetAll()
         {
             var imageMetadata = await _imageService.GetAllImagesAsync();
@@ -57,7 +57,7 @@ namespace awsDatabase.Controllers
         }
 
         // Endpoint to get metadata for a random image
-        [HttpGet("get-random")]
+        [HttpGet("get-random-metadata")]
         public async Task<IActionResult> GetRandomImageMetadata()
         {
             try

@@ -36,9 +36,8 @@ namespace awsDatabase.Repositories
         {
             try
             {
-                return await _context.Images
-                    .OrderBy(r => Guid.NewGuid())
-                    .FirstOrDefaultAsync();
+                var r = await _context.Images.OrderBy(_ => Guid.NewGuid()).Take(1).FirstAsync();
+                return r;
             }
             catch (Exception ex)
             {
