@@ -15,6 +15,7 @@ namespace awsDatabase.Controllers
         }
 
         // Endpoint to show metadata for all existing images
+        [HttpGet]
         public async Task<IActionResult> GetAll()
         {
             var imageMetadata = await _imageService.GetAllImagesAsync();
@@ -27,16 +28,15 @@ namespace awsDatabase.Controllers
 
          // Endpoint to upload an image
         [HttpPost("upload")]
-        public async Task<IActionResult> UploadImage(ImageUploadRequest request)
+        public async Task<IActionResult> UploadImage(IFormFile file, string name)
         {
             try
             {
-                var imageReference = await _imageService.UploadImageAsync(request.File, request.Name);
-                return Ok();
+                var imageReference = await _imageService.UploadImageAsync(file, name);
+                return Ok(imageReference);
             }
             catch (Exception ex)
             {
-                // Here you could use a logger to log the exception
                 return BadRequest(ex.Message);
             }
         }

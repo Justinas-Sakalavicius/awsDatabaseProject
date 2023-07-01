@@ -8,7 +8,7 @@ namespace awsDatabase.Mapper
     {
         public AutoMapperProfile() 
         {
-          
+            CreateMap<Image, ImageResponse>().ReverseMap();
         }
     }
 }

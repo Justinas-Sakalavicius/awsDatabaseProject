@@ -1,6 +1,7 @@
 ﻿using Amazon.Runtime;
 using Amazon.S3.Model;
 using AutoMapper;
+using awsDatabase.Constant;
 using awsDatabase.DTOs;
 using awsDatabase.Models;
 using awsDatabase.Repositories;
@@ -10,7 +11,7 @@ namespace awsDatabase.Services
     public interface IImageService
     {
         Task<List<ImageResponse>> GetAllImagesAsync();
-        Task<string> UploadImageAsync(IFormFile uploadClientModel, string name);
+        Task<ImageResponse> UploadImageAsync(IFormFile uploadClientModel, string name);
         Task DeleteImageAsync(string name);
         Task<ImageResponse> GetRandomImageAsync();
         Task<byte[]> GetImageAsync(string name);
@@ -40,28 +41,30 @@ namespace awsDatabase.Services
             return new List<ImageResponse>();
         }
 
-        public async Task<string> UploadImageAsync(IFormFile file, string name)
+        public async Task<ImageResponse> UploadImageAsync(IFormFile file, string name)
         {
             // Process file
             await using var memoryStream = new MemoryStream();
             await file.CopyToAsync(memoryStream);
             var fileExt = Path.GetExtension(file.FileName);
 
-            var s3Url = await _s3Service.UploadFileAsync(file, name);
+            var imageUploadResponse = await _s3Service.UploadFileAsync(file, name);
 
             var imageReference = new Image
             {
                 Name = name,
                 FileExtension = Path.GetExtension(file.FileName),
                 Size = memoryStream.Length,
-                Url = s3Url,
+                Url = $"https://{Constants.S3BucketName}.s3.eu-north-1.amazonaws.com/{name}",
                 CreateAt = DateTime.UtcNow,
                 UpdatedAt = DateTime.UtcNow,
             };
 
             var result = await _imageRepository.SaveImageAsync(imageReference);
 
-            return s3Url;
+            var imageResponse = _mapper.Map<ImageResponse>(imageReference);
+
+            return imageResponse;
         }
 
         public async Task DeleteImageAsync(string name)
@@ -74,10 +77,13 @@ namespace awsDatabase.Services
             }
 
             // Delete the file from S3
-            await _s3Service.DeleteFileAsync(imageReference.First().Url);
+            var result = await _s3Service.DeleteFileAsync(imageReference.First().Name);
 
-            // Delete the reference from the database
-            await _imageRepository.DeleteImageAsync(imageReference.First());
+            if(result.StatusCode < 300)
+            {
+                // Delete the reference from the database
+                await _imageRepository.DeleteImageAsync(imageReference.First());
+            }
         }
 
         public async Task<byte[]> GetImageAsync(string name)

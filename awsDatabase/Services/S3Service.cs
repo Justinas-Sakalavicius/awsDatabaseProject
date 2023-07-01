@@ -1,8 +1,10 @@
 ﻿using Amazon.S3;
 using Amazon.S3.Model;
 using Amazon.S3.Util;
+using awsDatabase.Constant;
 using awsDatabase.DTOs;
 using System.Net;
+using System.Xml.Linq;
 
 namespace awsDatabase.Services
 {
@@ -16,7 +18,6 @@ namespace awsDatabase.Services
     public class S3Service : IS3Service
     {
         private readonly IAmazonS3 _s3Client;
-        private const string BucketName = "justinas-sakalavicius-task8-image-api";
 
         public S3Service(IAmazonS3 s3Client)
         {
@@ -38,19 +39,30 @@ namespace awsDatabase.Services
             using var stream = file.OpenReadStream();
             var putObjectRequest = new PutObjectRequest
             {
-                BucketName = BucketName,
+                BucketName = Constants.S3BucketName,
                 Key = name,
                 InputStream = stream,
-                ContentType = file.ContentType
+                ContentType = file.ContentType,
             };
 
             try
             {
-                await BucketExistsAsync(BucketName);
+                if (!await ObjectExistsAsync(name))
+                {
+                    putObjectRequest.Metadata.Add("update-date", DateTime.UtcNow.ToString());
+                    putObjectRequest.Metadata.Add("name", name);
+                    putObjectRequest.Metadata.Add("size", file.Length.ToString());
+                    putObjectRequest.Metadata.Add("Content-Type", file.ContentType);
 
-                var result = await _s3Client.PutObjectAsync(putObjectRequest);
-                response.StatusCode = (int)result.HttpStatusCode;
-                response.Message = $"{name} has been uploaded successfully";
+                    var result = await _s3Client.PutObjectAsync(putObjectRequest);
+                    response.StatusCode = (int)result.HttpStatusCode;
+                    response.Message = $"{name} has been uploaded successfully";
+                }
+                else
+                {
+                    response.StatusCode = 400;
+                    response.Message = $"{name} has been already in bucket";
+                }
             }
             catch (AmazonS3Exception ex)
             {
@@ -75,13 +87,23 @@ namespace awsDatabase.Services
             var response = new ImageDeleteResponse();
             var deleteObjectRequest = new DeleteObjectRequest
             {
-                BucketName = BucketName,
+                BucketName = Constants.S3BucketName,
                 Key = key
             };
 
             try
             {
-                await _s3Client.DeleteObjectAsync(deleteObjectRequest);
+                if (await ObjectExistsAsync(key))
+                {
+                    await _s3Client.DeleteObjectAsync(deleteObjectRequest);
+                    response.StatusCode = 200;
+                    response.Message = $"{key} has been deleted successfully";
+                }
+                else
+                {
+                    response.StatusCode = 404;
+                    response.Message = $"{key} has been not found in bucket";
+                }
             }
             catch (AmazonS3Exception ex)
             {
@@ -101,10 +123,9 @@ namespace awsDatabase.Services
         {
             try
             {
-                
                 var metadataRequest = new GetObjectMetadataRequest
                 {
-                    BucketName = BucketName,
+                    BucketName = Constants.S3BucketName,
                     Key = key
                 };
 
@@ -114,15 +135,15 @@ namespace awsDatabase.Services
             }
             catch (AmazonS3Exception ex)
             {
-                throw new Exception($"An error occurred when getting metadata from S3: {ex.Message}", ex);
+                throw new Exception($"An AmazonS3Exception error occurred when getting metadata from S3: {ex.Message}", ex);
             }
             catch (Exception ex)
             {
-                throw new Exception($"An error occurred when getting metadata from S3: {ex.Message}", ex);
+                throw new Exception($"An unexpected error occurred when getting metadata from S3: {ex.Message}", ex);
             }
         }
 
-        private async Task<bool> BucketExistsAsync(string bucket)
+        public async Task<bool> BucketExistsAsync(string bucket)
         {
             try
             {
@@ -131,17 +152,21 @@ namespace awsDatabase.Services
             }
             catch (AmazonS3Exception ex)
             {
-                throw new Exception($"An error occurred when checking the bucket: {ex.Message}", ex);
+                throw new Exception($"An AmazonS3Exception error occurred when checking the bucket: {ex.Message}", ex);
+            }
+            catch (Exception ex)
+            {
+                throw new Exception($"An unexpected error occurred when checking the bucket: {ex.Message}", ex);
             }
         }
 
-        private async Task<bool> ObjectExistsAsync(string key)
+        public async Task<bool> ObjectExistsAsync(string key)
         {
             try
             {
                 var request = new GetObjectMetadataRequest
                 {
-                    BucketName = BucketName,
+                    BucketName = Constants.S3BucketName,
                     Key = key
                 };
 
@@ -153,7 +178,11 @@ namespace awsDatabase.Services
                 if (ex.StatusCode == HttpStatusCode.NotFound)
                     return false;
 
-                throw;
+                throw new Exception($"An AmazonS3Exception error occurred when checking the object: {ex.Message}", ex);
+            }
+            catch (Exception ex)
+            {
+                throw new Exception($"An unexpected error occurred when checking the object: {ex.Message}", ex);
             }
         }
     }
