@@ -1,6 +1,5 @@
 ﻿using awsDatabase.Services;
 using Microsoft.AspNetCore.Mvc;
-using awsDatabase.DTOs;
 
 namespace awsDatabase.Controllers
 {
