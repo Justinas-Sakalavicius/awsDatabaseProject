@@ -1,8 +1,6 @@
-﻿namespace awsDatabase.DTOs
+﻿namespace awsDatabase.DTOs;
+public class ImageDeleteResponse
 {
-    public class ImageDeleteResponse
-    {
-        public int StatusCode { get; set; } = 200;
-        public string Message { get; set; } = string.Empty;
-    }
+    public int StatusCode { get; set; } = 200;
+    public string Message { get; set; } = string.Empty;
 }

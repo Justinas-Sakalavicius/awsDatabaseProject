@@ -5,6 +5,7 @@ using awsDatabase.Constant;
 using awsDatabase.DTOs;
 using awsDatabase.Models;
 using awsDatabase.Repositories;
+using Microsoft.EntityFrameworkCore.Metadata.Internal;
 
 namespace awsDatabase.Services
 {
@@ -14,7 +15,7 @@ namespace awsDatabase.Services
         Task<ImageResponse> UploadImageAsync(IFormFile uploadClientModel, string name);
         Task DeleteImageAsync(string name);
         Task<ImageResponse> GetRandomImageAsync();
-        Task<byte[]> GetImageAsync(string name);
+        Task<ImageDownloadResponse> GetImageAsync(string name);
     }
 
     public class ImageService : IImageService
@@ -36,9 +37,8 @@ namespace awsDatabase.Services
         public async Task<List<ImageResponse>> GetAllImagesAsync()
         {
             var entities = await _imageRepository.GetAllImagesAsync();
-            //var viewModel = entities.Select(entity => _imageMapper.ToClientModel(entity, _s3Service)).ToList();
-
-            return new List<ImageResponse>();
+            var imageResponses = _mapper.Map<List<ImageResponse>>(entities);
+            return imageResponses;
         }
 
         public async Task<ImageResponse> UploadImageAsync(IFormFile file, string name)
@@ -86,9 +86,9 @@ namespace awsDatabase.Services
             }
         }
 
-        public async Task<byte[]> GetImageAsync(string name)
+        public async Task<ImageDownloadResponse> GetImageAsync(string name)
         {
-            throw new NotImplementedException();
+            return await _s3Service.GetFileByKeyAsync(name);
         }
 
         public async Task<ImageResponse> GetRandomImageAsync()

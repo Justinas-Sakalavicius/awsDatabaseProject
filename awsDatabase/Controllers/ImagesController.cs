@@ -48,7 +48,7 @@ namespace awsDatabase.Controllers
             try
             {
                 await _imageService.DeleteImageAsync(imageName);
-                return Ok();
+                return NoContent();
             }
             catch (Exception ex)
             {
@@ -78,15 +78,14 @@ namespace awsDatabase.Controllers
         {
             try
             {
-                // var stream = await _imageService.DownloadImageAsync(id);
+                var obj = await _imageService.GetImageAsync(imageName);
 
-                // if (stream == null)
-                // {
-                //     return NotFound();
-                // }
+                if (obj == null)
+                {
+                    return NotFound();
+                }
 
-                //return File(stream, "application/octet-stream"); // returns a FileStreamResult
-                return Ok();
+                return File(obj.ResponseStream, obj.ContentType); // returns a FileStreamResult .... "application/octet-stream"
             }
             catch (Exception ex)
             {

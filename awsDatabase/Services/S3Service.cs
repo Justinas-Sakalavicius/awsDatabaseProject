@@ -4,7 +4,6 @@ using Amazon.S3.Util;
 using awsDatabase.Constant;
 using awsDatabase.DTOs;
 using System.Net;
-using System.Xml.Linq;
 
 namespace awsDatabase.Services
 {
@@ -13,6 +12,7 @@ namespace awsDatabase.Services
         Task<ImageUploadResponse> UploadFileAsync(IFormFile file, string name);
         Task<ImageDeleteResponse> DeleteFileAsync(string key);
         Task<MetadataCollection> GetFileMetadataAsync(string key);
+        Task<ImageDownloadResponse> GetFileByKeyAsync(string key);
     }
 
     public class S3Service : IS3Service
@@ -117,6 +117,27 @@ namespace awsDatabase.Services
             }
 
             return response;
+        }
+
+        public async Task<ImageDownloadResponse> GetFileByKeyAsync(string key)
+        {
+            try
+            {
+                var s3Object = await _s3Client.GetObjectAsync(Constants.S3BucketName, key);
+                return new ImageDownloadResponse
+                {
+                    ResponseStream = s3Object.ResponseStream,
+                    ContentType = s3Object.Headers.ContentType
+                };
+            }
+            catch (AmazonS3Exception ex)
+            {
+                throw new Exception($"An AmazonS3Exception error occurred when getting object from S3: {ex.Message}", ex);
+            }
+            catch (Exception ex)
+            {
+                throw new Exception($"An unexpected error occurred when getting object from S3: {ex.Message}", ex);
+            }
         }
 
         public async Task<MetadataCollection> GetFileMetadataAsync(string key)
