@@ -1,4 +1,5 @@
 using Amazon.S3;
+using Amazon.Util;
 using awsDatabase.Data;
 using awsDatabase.Mapper;
 using awsDatabase.Repositories;
@@ -15,7 +16,7 @@ namespace awsDatabase
         public static void Main(string[] args)
         {
             var builder = WebApplication.CreateBuilder(args);
-
+            builder.WebHost.UseUrls(new[] { "http://*:5000" });
             // Add services to the container.
 
             builder.Services.AddControllers();
@@ -56,14 +57,14 @@ namespace awsDatabase
             app.UseSwagger();
             app.UseSwaggerUI();
 
-            app.UseHttpsRedirection();
-
             app.UseAuthorization();
-
 
             app.MapControllers();
 
             app.Run();
+
+            app.MapGet("/", () => EC2InstanceMetadata.InstanceId.ToString() + " " + EC2InstanceMetadata.PrivateIpAddress.ToString());
+            app.MapGet("/Region", () => EC2InstanceMetadata.Region.ToString() + " " + EC2InstanceMetadata.AvailabilityZone.ToString());
         }
     }
 }
