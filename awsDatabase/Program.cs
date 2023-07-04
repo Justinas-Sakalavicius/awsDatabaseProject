@@ -1,13 +1,8 @@
 using Amazon.S3;
-using Amazon.Util;
 using awsDatabase.Data;
-using awsDatabase.Mapper;
 using awsDatabase.Repositories;
 using awsDatabase.Services;
 using Microsoft.EntityFrameworkCore;
-using Microsoft.Extensions.Configuration;
-using Microsoft.Extensions.Hosting;
-using System;
 
 namespace awsDatabase
 {
@@ -60,11 +55,7 @@ namespace awsDatabase
             app.UseAuthorization();
 
             app.MapControllers();
-
             app.Run();
-
-            app.MapGet("/", () => EC2InstanceMetadata.InstanceId.ToString() + " " + EC2InstanceMetadata.PrivateIpAddress.ToString());
-            app.MapGet("/Region", () => EC2InstanceMetadata.Region.ToString() + " " + EC2InstanceMetadata.AvailabilityZone.ToString());
         }
     }
 }
