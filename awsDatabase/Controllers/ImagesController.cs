@@ -7,7 +7,7 @@ namespace awsDatabase.Controllers
     [ApiController]
     public class ImagesController : ControllerBase
     {
-        private readonly IImageService _imageService;  // This should be an interface for your image service
+        private readonly IImageService _imageService;
         public ImagesController(IImageService imageService)
         {
             _imageService = imageService;
@@ -66,7 +66,6 @@ namespace awsDatabase.Controllers
             }
             catch (Exception ex)
             {
-                // Here you could use a logger to log the exception
                 return BadRequest(ex.Message);
             }
         }
@@ -84,11 +83,10 @@ namespace awsDatabase.Controllers
                     return NotFound();
                 }
 
-                return File(obj.ResponseStream, obj.ContentType); // returns a FileStreamResult .... "application/octet-stream"
+                return File(obj.ResponseStream, obj.ContentType); 
             }
             catch (Exception ex)
             {
-                // Here you could use a logger to log the exception
                 return BadRequest(ex.Message);
             }
         }

@@ -1,7 +1,11 @@
 using Amazon.S3;
+using Amazon.SimpleNotificationService;
+using Amazon.SQS;
 using awsDatabase.Data;
 using awsDatabase.Repositories;
 using awsDatabase.Services;
+using Microsoft.AspNetCore.Mvc.Infrastructure;
+using Microsoft.AspNetCore.Mvc.Routing;
 using Microsoft.EntityFrameworkCore;
 
 namespace awsDatabase
@@ -23,7 +27,13 @@ namespace awsDatabase
             builder.Services.AddScoped<IImageService, ImageService>();
             builder.Services.AddDefaultAWSOptions(builder.Configuration.GetAWSOptions());
             builder.Services.AddAWSService<IAmazonS3>();
+            builder.Services.AddAWSService<IAmazonSQS>();
+            builder.Services.AddAWSService<IAmazonSimpleNotificationService>();
+            builder.Services.AddScoped<INotificationService, NotificationService>();
             builder.Services.AddScoped<IS3Service, S3Service>();
+            builder.Services.AddSingleton<IUrlHelperFactory, UrlHelperFactory>();
+            builder.Services.AddSingleton<IActionContextAccessor, ActionContextAccessor>();
+            builder.Services.AddHostedService<QueueMessageService>();
 
             // Learn more about configuring Swagger/OpenAPI at https://aka.ms/aspnetcore/swashbuckle
             builder.Services.AddEndpointsApiExplorer();

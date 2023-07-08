@@ -1,9 +1,15 @@
-﻿using Amazon.S3;
+﻿using Amazon.Runtime.Internal.Endpoints.StandardLibrary;
+using Amazon.S3;
 using Amazon.S3.Model;
 using Amazon.S3.Util;
 using awsDatabase.Constant;
+using awsDatabase.Controllers;
 using awsDatabase.DTOs;
+using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.Mvc.Infrastructure;
+using Microsoft.AspNetCore.Mvc.Routing;
 using System.Net;
+using System.Text;
 
 namespace awsDatabase.Services
 {
@@ -11,26 +17,27 @@ namespace awsDatabase.Services
     {
         Task<ImageUploadResponse> UploadFileAsync(IFormFile file, string name);
         Task<ImageDeleteResponse> DeleteFileAsync(string key);
-        Task<MetadataCollection> GetFileMetadataAsync(string key);
         Task<ImageDownloadResponse> GetFileByKeyAsync(string key);
     }
 
     public class S3Service : IS3Service
     {
         private readonly IAmazonS3 _s3Client;
+        private readonly INotificationService _notificationService;
+        private readonly IUrlHelperFactory _urlHelperFactory;
+        private readonly IActionContextAccessor _actionContextAccessor;
 
-        public S3Service(IAmazonS3 s3Client)
+        public S3Service(
+            IAmazonS3 s3Client, 
+            INotificationService notificationService,
+            IUrlHelperFactory urlHelperFactory,
+            IActionContextAccessor actionContextAccessor
+            )
         {
             _s3Client = s3Client;
-            //var awsOptions = new AWSOptions
-            //{
-            //    Region = RegionEndpoint.EUNorth1, // Change to your AWS Region
-            //                                      // For local development/testing, you could hard-code credentials like this:
-            //                                      // But for production use, you'd want to use IAM roles, environment variables, or deployment parameters
-            //    //Credentials = new BasicAWSCredentials("<aws_access_key_id>", "<aws_secret_access_key>"),
-            //};
-
-            //_s3Client = new AmazonS3Client(awsOptions.Credentials, awsOptions.Region);
+            _notificationService = notificationService;
+            _urlHelperFactory = urlHelperFactory;
+            _actionContextAccessor = actionContextAccessor;
         }
 
         public async Task<ImageUploadResponse> UploadFileAsync(IFormFile file, string name)
@@ -49,12 +56,27 @@ namespace awsDatabase.Services
             {
                 if (!await ObjectExistsAsync(name))
                 {
-                    putObjectRequest.Metadata.Add("update-date", DateTime.UtcNow.ToString());
+                    var metadata = new Dictionary<string, string>();
+
+                    metadata["name"] = name;
+                    metadata["size"] = file.Length.ToString();
+                    metadata["content-type"] = file.ContentType;
+                    metadata["update-date"] = DateTime.UtcNow.ToString();
+
+                    var urlHelper = _urlHelperFactory.GetUrlHelper(_actionContextAccessor.ActionContext);
+                    metadata["link"] = urlHelper.Action(
+                        nameof(ImagesController.DownloadImage), "Images", new { imageName = name }, 
+                        urlHelper.ActionContext.HttpContext.Request.Scheme);
+
                     putObjectRequest.Metadata.Add("name", name);
                     putObjectRequest.Metadata.Add("size", file.Length.ToString());
-                    putObjectRequest.Metadata.Add("Content-Type", file.ContentType);
+                    putObjectRequest.Metadata.Add("content-type", file.ContentType);
+                    putObjectRequest.Metadata.Add("update-date", DateTime.UtcNow.ToString());
 
                     var result = await _s3Client.PutObjectAsync(putObjectRequest);
+                    
+                    await _notificationService.SendMessageToQueue(CreateMessage(metadata));
+
                     response.StatusCode = (int)result.HttpStatusCode;
                     response.Message = $"{name} has been uploaded successfully";
                 }
@@ -80,6 +102,19 @@ namespace awsDatabase.Services
             }
 
             return response;
+        }
+
+        private string CreateMessage(Dictionary<string, string> imageMetadata)
+        {
+            StringBuilder builder = new();
+            builder.AppendLine("Image was uploaded");
+            builder.AppendLine();
+            foreach (var keyValuePair in imageMetadata)
+            {
+                builder.AppendLine($"{keyValuePair.Key}:::{keyValuePair.Value}");
+            }
+
+            return builder.ToString();
         }
 
         public async Task<ImageDeleteResponse> DeleteFileAsync(string key)
@@ -137,30 +172,6 @@ namespace awsDatabase.Services
             catch (Exception ex)
             {
                 throw new Exception($"An unexpected error occurred when getting object from S3: {ex.Message}", ex);
-            }
-        }
-
-        public async Task<MetadataCollection> GetFileMetadataAsync(string key)
-        {
-            try
-            {
-                var metadataRequest = new GetObjectMetadataRequest
-                {
-                    BucketName = Constants.S3BucketName,
-                    Key = key
-                };
-
-                var response = await _s3Client.GetObjectMetadataAsync(metadataRequest);
-
-                return response.Metadata;
-            }
-            catch (AmazonS3Exception ex)
-            {
-                throw new Exception($"An AmazonS3Exception error occurred when getting metadata from S3: {ex.Message}", ex);
-            }
-            catch (Exception ex)
-            {
-                throw new Exception($"An unexpected error occurred when getting metadata from S3: {ex.Message}", ex);
             }
         }
 
