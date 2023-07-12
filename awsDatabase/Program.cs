@@ -33,7 +33,6 @@ namespace awsDatabase
             builder.Services.AddScoped<IS3Service, S3Service>();
             builder.Services.AddSingleton<IUrlHelperFactory, UrlHelperFactory>();
             builder.Services.AddSingleton<IActionContextAccessor, ActionContextAccessor>();
-            builder.Services.AddHostedService<QueueMessageService>();
 
             // Learn more about configuring Swagger/OpenAPI at https://aka.ms/aspnetcore/swashbuckle
             builder.Services.AddEndpointsApiExplorer();
