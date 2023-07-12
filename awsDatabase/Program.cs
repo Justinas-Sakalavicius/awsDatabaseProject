@@ -1,3 +1,4 @@
+using Amazon.Lambda;
 using Amazon.S3;
 using Amazon.SimpleNotificationService;
 using Amazon.SQS;
@@ -29,6 +30,7 @@ namespace awsDatabase
             builder.Services.AddAWSService<IAmazonS3>();
             builder.Services.AddAWSService<IAmazonSQS>();
             builder.Services.AddAWSService<IAmazonSimpleNotificationService>();
+            builder.Services.AddAWSService<IAmazonLambda>();
             builder.Services.AddScoped<INotificationService, NotificationService>();
             builder.Services.AddScoped<IS3Service, S3Service>();
             builder.Services.AddSingleton<IUrlHelperFactory, UrlHelperFactory>();
